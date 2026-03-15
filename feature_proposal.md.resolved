@@ -1,0 +1,78 @@
+# Advanced Dashboard Features Proposal
+
+Based on the existing database structure (`Attendees`, `Assessments`, `Feedback`, `CPD`, etc.), here are 15 impactful features designed to help School Admins and Principals monitor teachers and manage professional development effectively.
+
+## 1. Teacher Attendance & Engagement Analytics
+- **Description**: Real-time tracking of shared zoom duration and login/logout times.
+- **Value**: Admins can see who actually attended the full session vs. who just logged in.
+- **Data Source**: `Attendees`, `zooms`
+
+## 2. Assessment Performance Leaderboard
+- **Description**: A ranking of teachers based on their MCQ and assessment scores.
+- **Value**: Identify high-performing staff to act as mentors for others.
+- **Data Source**: `workshop_mcq_responses`, `workshop_assessment_responses`
+
+## 3. School-Wide Skill Gap Analysis
+- **Description**: Visualize performance across different categories (e.g., Digital Tools, NEP 2020, Communication).
+- **Value**: Helps Principals decide which training topics to prioritize next.
+- **Data Source**: `categories` + `workshop_mcq_responses`
+
+## 4. CPD (Continuous Professional Development) Credit Tracker
+- **Description**: Automated calculation of CPD hours earned by each teacher.
+- **Value**: Ensures teachers meet mandatory training hour requirements set by boards like CBSE/ICSE.
+- **Data Source**: `workshops.cpd`, `payments`
+
+## 5. Centralized Certificate Repository
+- **Description**: A "one-click" portal for Principals to download all certificates for their entire staff.
+- **Value**: Saves dozens of hours as teachers no longer need to email certificates manually.
+- **Data Source**: `payments` (is_attended) + `workshops`
+
+## 6. AI-Powered Workshop Sentiment Reports
+- **Description**: Summarized reports showing teacher feedback and satisfaction levels for each workshop.
+- **Value**: Provides honest insights into whether the training was useful or needs changes.
+- **Data Source**: `workshop_ai_reports`, `feedback`
+
+## 7. Bulk Enrollment & Coupon Management
+- **Description**: Advanced management of school-specific coupons and bulk teacher assignment.
+- **Value**: Simplifies the process of enrolling large batches of teachers in mandatory sessions.
+- **Data Source**: `coupons`, `codes`
+
+## 8. Teacher Profile Verification Portal
+- **Description**: Interface to approve/reject profile correction requests (name changes, designations).
+- **Value**: Ensures consistency in official data and certification names.
+- **Data Source**: `profile_correction_requests`
+
+## 9. Learning Roadmap & Calendar
+- **Description**: A school-wide view of upcoming workshops teachers are assigned to.
+- **Value**: Helps in scheduling school activities without clashing with teacher training times.
+- **Data Source**: `workshops` (upcoming), `payments`
+
+## 10. Pre- vs Post-Training Impact Analysis
+- **Description**: Comparing teacher responses before and after workshops (if assessments allow).
+- **Value**: Demonstrates the ROI of the training sessions to the school board.
+- **Data Source**: `workshop_assessment_responses`
+
+## 11. Custom Workshop Request System
+- **Description**: A dedicated form for Principals to request specific training topics.
+- **Value**: Tailors the IPN Academy experience to the school's unique pedagogical needs.
+- **Data Source**: `suggestion` table
+
+## 12. Budgeting & ROI Dashboard
+- **Description**: Visualizing total school savings using B2B models vs retail pricing.
+- **Value**: Makes the financial value of the IPN partnership transparent to the management.
+- **Data Source**: `payments.amount`, `workshops.price`
+
+## 13. Automatic "Mandatory Training" Reminders
+- **Description**: System alerts for teachers who haven't completed assessments or missed sponsored sessions.
+- **Value**: Reduces administrative follow-up work for the Principal's office.
+- **Data Source**: `workshops_emails`, `Attendees`
+
+## 14. Teacher Portfolio Generation
+- **Description**: A downloadable PDF summarizing a teacher's entire learning journey for the year.
+- **Value**: Useful for performance appraisals and career progression.
+- **Data Source**: Aggregated from `payments`, `workshops`, and `assessment_responses`
+
+## 15. Training Feedback Loop
+- **Description**: Allows Principals to leave comments on workshop outcomes and see AI reflections on teacher questions.
+- **Value**: Improves the dialogue between school management and training providers.
+- **Data Source**: `workshop_ai_interactions`, `conversation_history`

@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate of Completion</title>
+    <!-- Latest versions of libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Montserrat', sans-serif;
+    background-color: #f5f5f5;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+/* Certificate wrapper to maintain aspect ratio */
+.certificate-wrapper {
+    width: 100%;
+    max-width: 1000px;
+    margin: 0 auto;
+    position: relative;
+    box-shadow: 0 15px 35px rgba(50, 50, 93, 0.1), 0 5px 15px rgba(0, 0, 0, 0.07);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* This maintains the aspect ratio */
+.aspect-ratio-box {
+    position: relative;
+    padding-top: 70%; /* 70% is close to A4 landscape aspect ratio */
+}
+
+.certificate {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: white;
+    overflow: hidden;
+}
+
+/* Premium gold corner decorations */
+.corner {
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    z-index: 3;
+    opacity: 0.7;
+}
+
+.corner.top-left {
+    top: 0;
+    left: 0;
+    border-top: 4px solid #d4af37;
+    border-left: 4px solid #d4af37;
+    border-radius: 8px 0 0 0;
+}
+
+.corner.top-right {
+    top: 0;
+    right: 0;
+    border-top: 4px solid #d4af37;
+    border-right: 4px solid #d4af37;
+    border-radius: 0 8px 0 0;
+}
+
+.corner.bottom-left {
+    bottom: 0;
+    left: 0;
+    border-bottom: 4px solid #d4af37;
+    border-left: 4px solid #d4af37;
+    border-radius: 0 0 0 8px;
+}
+
+.corner.bottom-right {
+    bottom: 0;
+    right: 0;
+    border-bottom: 4px solid #d4af37;
+    border-right: 4px solid #d4af37;
+    border-radius: 0 0 8px 0;
+}
+
+/* Decorative border */
+.decorative-border {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    right: 15px;
+    bottom: 15px;
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    z-index: 1;
+    pointer-events: none;
+}
+
+.certificate-content {
+    padding: 40px;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: white;
+    background-image: 
+        url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="250" height="250" viewBox="0 0 250 250"><path d="M125,125 m-120,0 a120,120 0 1,0 240,0 a120,120 0 1,0 -240,0" stroke="%23f5f5f5" fill="none" stroke-width="0.2" stroke-dasharray="3,3" /></svg>'),
+        radial-gradient(circle at 75% 75%, rgba(212, 175, 55, 0.03) 0%, transparent 70%);
+    background-size: 300px, cover;
+    background-repeat: repeat, no-repeat;
+    background-position: center, center;
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+}
+
+.header {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 5%;
+    position: relative;
+}
+
+.logo {
+    width: 20%;
+    position: relative;
+    z-index: 2;
+}
+
+.logo::after {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    right: -10px;
+    bottom: -10px;
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.1) 0%, transparent 70%);
+    z-index: -1;
+    border-radius: 50%;
+}
+
+#logo {
+    width: 100%;
+    height: auto;
+    max-width: 150px; /* Limit maximum size */
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.1));
+}
+
+/* Replace clip-path with an actual SVG shape */
+.blue-bar-container {
+    position: absolute;
+    top: 0;
+    right: 14%; /* Align properly */
+    width: 8%;
+    height: 65%;
+    z-index: 1;
+    filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.blue-bar-svg {
+    width: 100%;
+    height: 80%;
+    display: block;
+}
+
+/* Keep the original blue bar hidden but available for structure */
+.blue-bar {
+    display: none;
+}
+
+.title {
+    font-size: 2.3vw;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 2.3%;
+    position: relative;
+    font-family: 'Playfair Display', serif;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.title::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 0;
+    width: 230px;
+    height: 3px;
+    background: linear-gradient(90deg, #d4af37, transparent);
+}
+
+.presented-to {
+    font-size: 1.4vw;
+    color: #555;
+    margin-bottom: 1%;
+    font-family: 'Cormorant Garamond', serif;
+    /*font-style: italic;*/
+}
+
+.recipient-name {
+    font-size: 2.2vw;
+    font-weight: 500;
+    color: #1a73e8;
+    margin-bottom: 3%;
+    font-family: 'Playfair Display', serif;
+    position: relative;
+    display: inline-block;
+}
+
+.recipient-name::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg, #1a73e8, transparent);
+}
+
+.description {
+    font-size: 1.4vw;
+    color: #555;
+    margin-bottom: 2%;
+    font-family: 'Cormorant Garamond', serif;
+    line-height: 1.5;
+}
+
+.course-name {
+    font-size: 1.8vw;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 2%;
+    font-family: 'Playfair Display', serif;
+    position: relative;
+    display: inline-block;
+}
+
+.course-name::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    width: 70%;
+    height: 1px;
+    background: rgba(212, 175, 55, 0.4);
+}
+
+.cpd {
+    font-size: 1.2vw;
+    color: #555;
+    margin-bottom: 3%;
+    font-family: 'Playfair Display', serif;
+    line-height: 1.2;
+}
+
+.footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    position: absolute;
+    bottom: 7.3%;
+    left: 40px;
+    right: 40px;
+}
+
+.signature-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    position: relative;
+}
+
+/*.signature-section::before {*/
+/*    content: '';*/
+/*    position: absolute;*/
+/*    bottom: 38px;*/
+/*    left: 0;*/
+/*    width: 120px;*/
+/*    height: 1px;*/
+/*    background: rgba(0, 0, 0, 0.1);*/
+/*}*/
+
+.signature-img {
+    width: 100%;
+    max-width: 120px; /* Limit maximum size */
+    height: auto;
+    margin-bottom: 10px;
+    object-fit: contain;
+    filter: contrast(1.1);
+}
+
+.signatory {
+    font-size: 1.2vw;
+    font-weight: 500;
+    color: #333;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.designation {
+    font-size: 1vw;
+    color: #777;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 300;
+}
+
+.provider-section {
+    flex: 1;
+    text-align: center;
+    position: relative;
+}
+
+.provider-section::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 40px;
+    background-image: radial-gradient(circle, rgba(212, 175, 55, 0.2) 0%, transparent 70%);
+    border-radius: 50%;
+}
+
+.provided-by {
+    font-size: 1.2vw;
+    color: #777;
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+}
+
+.institution {
+    font-size: 1vw;
+    font-weight: 500;
+    color: #333;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.date {
+    font-size: 1vw;
+    color: #777;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.certificate-seal {
+    position: absolute;
+    top: 23%;
+    right: 12%; /* Align with the blue bar */
+    width: 20%; /* Match blue bar width */
+    height: auto;
+    z-index: 2;
+    max-width: 120px; /* Limit maximum size */
+    display: flex;
+    justify-content: center;
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+    animation: pulse 5s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}
+
+.seal-img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
+.qr-code {
+    flex: 1;
+    text-align: right;
+    position: relative;
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-start;
+}
+
+.qr-code::after {
+    content: 'Scan to verify';
+    position: absolute;
+    bottom: -20px;
+    right: 0;
+    font-size: 0.7vw;
+    color: #999;
+    font-family: 'Montserrat', sans-serif;
+    letter-spacing: 0.5px;
+}
+
+.qr-img {
+    width: auto;
+    max-width: 70px; /* Limit maximum size */
+    height: auto;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 5px;
+    background-color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.bottom-border {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 15px;
+    background: linear-gradient(to right, 
+  #f9a826 0%, 
+  #f9a826 15%, 
+  #0a4590 15%, 
+  #0a4590 85%, 
+  #f9a826 85%, 
+  #f9a826 100%);
+}
+
+/* Download buttons container */
+.download-container {
+    margin-top: 30px;
+    text-align: center;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.download-btn {
+    background-color: #0a4590;
+    color: white;
+    font-size: 16px;
+    font-weight: 500;
+    padding: 14px 28px;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    letter-spacing: 0.5px;
+    font-family: 'Montserrat', sans-serif;
+    position: relative;
+    overflow: hidden;
+}
+
+.download-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.7s ease;
+}
+
+.download-btn:hover {
+    background-color: #083672;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.download-btn:hover::before {
+    left: 100%;
+}
+
+.download-btn.png {
+    background-color: #1a73e8;
+}
+
+.download-btn.png:hover {
+    background-color: #1558b8;
+}
+
+/* Decorative elements */
+.watermark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    font-size: 150px;
+    color: rgba(0, 0, 0, 0.02);
+    font-family: 'Playfair Display', serif;
+    text-transform: uppercase;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Hide download button when printing */
+@media print {
+    body {
+        background: none;
+    }
+    
+    .certificate-wrapper {
+        max-width: none;
+        width: 100%;
+        box-shadow: none;
+    }
+    
+    .certificate {
+        box-shadow: none;
+        border: none;
+    }
+    
+    .download-container {
+        display: none;
+    }
+}
+
+/* Responsive adjustments for smaller screens */
+@media screen and (max-width: 768px) {
+    .certificate-content {
+        padding: 20px;
+    }
+    
+    .footer {
+        bottom: 7.3%;
+        left: 20px;
+        right: 20px;
+    }
+    
+    .logo {
+        width: 25%;
+    }
+    
+    .title {
+        font-size: 1.7vw; /* Smaller title on medium screens */
+    }
+    
+    .certificate-seal {
+        top: 26% !important;
+        right: 11.5% !important; /* Keep aligned with blue bar */
+        width: 13% !important; /* Match blue bar width */
+        max-width: 80px;
+    }
+    
+    .signature-img {
+        max-width: 50px;
+         margin-bottom: 2px;
+    }
+    
+    .qr-img {
+        max-width: 40px;
+    }
+
+    .bottom-border {
+        height: 2px;
+    }
+    .course-name {
+        margin-bottom: 3%;
+    }
+    .download-btn {
+    font-size: 10px;
+    font-weight: 400;
+    padding: 7px 12px;
+    border-radius: 5px;
+}
+.watermark {
+    font-size: 80px;
+}
+.title::after {
+    content: '';
+    position: absolute;
+    font-size: 6px;
+    bottom: 0px;
+    left: 0;
+    width: 124px;
+    height: 1.7px;
+}
+.qr-code::after {
+        content: 'Scan to verify';
+    position: absolute;
+    bottom: -1px;
+    right: 4px;
+    font-size: 1.05vw;
+    color: #999;
+    font-family: 'Montserrat', sans-serif;
+    letter-spacing: 0.2px;
+}
+.corner.top-left {
+    top: 0;
+    left: 0;
+    border-top: 1.5px solid #d4af37;
+    border-left: 1.5px solid #d4af37;
+    border-radius: 8px 0 0 0;
+}
+
+.corner.top-right {
+    top: 0;
+    right: 0;
+    border-top: 1.5px solid #d4af37;
+    border-right: 1.5px solid #d4af37;
+    border-radius: 0 8px 0 0;
+}
+
+.corner.bottom-left {
+    bottom: 0;
+    left: 0;
+    border-bottom: 1.5px solid #d4af37;
+    border-left: 1.5px solid #d4af37;
+    border-radius: 0 0 0 8px;
+}
+
+.corner.bottom-right {
+    bottom: 0;
+    right: 0;
+    border-bottom: 1.5px solid #d4af37;
+    border-right: 1.5px solid #d4af37;
+    border-radius: 0 0 8px 0;
+}
+
+.cpd {
+    font-size: 1.1vw;
+    margin-bottom: 1%;
+}
+}
+
+@media screen and (max-width: 500px) {
+    .title {
+        font-size: 3.5vw; /* Even smaller on small screens */
+        margin-bottom: 1.03%;
+    }
+    
+    .recipient-name {
+        font-size: 3vw;
+    }
+    
+    .course-name {
+        font-size: 3vw;
+    }
+    
+    .logo {
+        width: 30%;
+    }
+    
+    .certificate-seal {
+        top: 20%;
+        right: 14%; /* Keep aligned with blue bar */
+        width: 8%; /* Match blue bar width */
+        max-width: 60px;
+    }
+
+    .blue-bar {
+        margin-right: 14% !important; /* Maintain consistent alignment */
+    }
+
+    .cpd {
+        font-size: 1.4vw;
+    }
+}
+    </style>
+</head>
+<body>
+    <!-- Loading indicator -->
+    <div id="loading" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); display: flex; justify-content: center; align-items: center; z-index: 9999;">
+        <div style="text-align: center;">
+            <div style="border: 5px solid #f3f3f3; border-top: 5px solid #3498db; border-radius: 50%; width: 50px; height: 50px; margin: 0 auto; animation: spin 2s linear infinite;"></div>
+            <p style="margin-top: 20px; font-family: 'Montserrat', sans-serif;">Loading Certificate...</p>
+        </div>
+    </div>
+
+    <style>
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    
+    <!-- Certificate wrapper for maintaining aspect ratio -->
+    <div class="certificate-wrapper">
+        <div class="aspect-ratio-box">
+            <div class="certificate" id="certificate">
+                <!-- Decorative corners -->
+                <div class="corner top-left"></div>
+                <div class="corner top-right"></div>
+                <div class="corner bottom-left"></div>
+                <div class="corner bottom-right"></div>
+                
+                <!-- Inner decorative border -->
+                <div class="decorative-border"></div>
+                
+                <!-- Watermark -->
+                <div class="watermark">IPN IPN IPN IPN </div>
+                
+                <div class="blue-bar"></div>
+                <div class="blue-bar-container">
+                    <!-- Embed SVG directly to ensure it renders correctly -->
+                    <svg class="blue-bar-svg" viewBox="0 0 100 250" preserveAspectRatio="none">
+                        <defs>
+                            <linearGradient id="blueGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stop-color="#0a4590" />
+                                <stop offset="85%" stop-color="#0a4590" />
+                                <stop offset="100%" stop-color="#bcbab7" />
+                            </linearGradient>
+                        </defs>
+                        <path d="M0,0 L100,0 L100,225 L50,250 L0,225 Z" fill="url(#blueGradient)" stroke="none" />
+                        <rect x="0" y="0" width="100" height="4.6" fill="#ff9114" />
+                    </svg>
+                </div>
+                <div class="certificate-content">
+                    <div class="header">
+                        <div class="logo">
+                            <img src="ipn.png" alt="IPN Logo" id="logo">
+                        </div>
+                    </div>
+                    
+                    <h1 class="title">CERTIFICATE OF COMPLETION</h1>
+                    
+                    <p class="presented-to">Presented to</p>
+                    
+                    <h2 class="recipient-name" id="recipient-name">Your name</h2>
+                    
+                    <p class="description">For successfully completing an ILA Online Workshop On Topic</p>
+                    
+                    <h3 class="course-name" id="workshop-name">Workshop name</h3>
+                    <p class="cpd">And also awarded with 1.5 CPD Hours</p>
+                    
+                    <div class="footer">
+                        <div class="signature-section">
+                            <img src="sign.png" alt="Signature" class="signature-img">
+                            <p class="signatory">Gaurav Yadav</p>
+                            <p class="designation">Founder & Moderator <br> IPN Foundation</p>
+                        </div>
+                        
+                        <div class="provider-section">
+                            <p class="provided-by">Workshop On</p>
+                            <p class="institution" id="workshop-date">Date: 23 March 2025</p>
+                            <p class="date" id="certificate-id">Certificate: IPN-57458439245</p>
+                        </div>
+                        
+                        <div class="qr-code">
+                            <img id="qr-code-img" src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://ipnacademy.in/user/certificate.php?id=99140197966204906" alt="QR Code" class="qr-img">
+                        </div>
+                    </div>
+                    
+                    <div class="certificate-seal">
+                        <img src="seal.png" alt="Verified Certificate" class="seal-img">
+                    </div>
+                    
+                    <div class="bottom-border"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error message div -->
+    <div id="error-message" style="display: none; text-align: center; padding: 20px; margin: 20px auto; max-width: 500px; background-color: #fff3f3; border-left: 4px solid #e74c3c; color: #e74c3c; font-family: 'Montserrat', sans-serif;"></div>
+
+    <!-- Download Buttons -->
+    <div class="download-container">
+        <button id="pdfBtn" class="download-btn">Download PDF</button>
+        <button id="pngBtn" class="download-btn png">Download PNG</button>
+    </div>
+
+    <script>
+        // Parse URL parameters
+        function getUrlParameter(name) {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            var results = regex.exec(location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+
+        // Fetch certificate data using AJAX
+        $(document).ready(function() {
+            // Get certificate ID from URL
+            const certificateId = getUrlParameter('id');
+            
+            if (!certificateId) {
+                showError("Certificate ID is missing. Please provide a valid certificate ID.");
+                return;
+            }
+
+            // Fetch certificate data
+            $.ajax({
+                url: 'get_certificate.php',
+                type: 'GET',
+                data: { id: certificateId },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === true) {
+                        // Update certificate with data
+                        updateCertificate(response);
+                    } else {
+                        // Show error message
+                        showError(response.message || "Failed to load certificate data");
+                    }
+                },
+                error: function(xhr, status, error) {
+                    showError("Error: " + error);
+                },
+                complete: function() {
+                    // Hide loading indicator
+                    $('#loading').hide();
+                }
+            });
+        });
+
+        // Update certificate with data
+        function updateCertificate(data) {
+            // Update recipient name
+            $('#recipient-name').text(data.u_name);
+            
+            // Update workshop name
+            $('#workshop-name').text(data.w_name);
+            
+            // Update CPD hours with proper formatting
+            if (data.cpd) {
+                // Convert to number and format (remove trailing zeros)
+                let cpdHours = parseFloat(data.cpd);
+                // Format CPD hours: 1.0 -> 1, 1.50 -> 1.5
+                let formattedCPD = cpdHours.toString();
+                if (formattedCPD.endsWith('.0')) {
+                    formattedCPD = formattedCPD.slice(0, -2); // Remove .0
+                }
+                $('.cpd').text(`And also awarded with ${formattedCPD} CPD Hour${cpdHours !== 1 ? 's' : ''}`);
+            } else {
+                // Hide CPD section if not provided
+                $('.cpd').hide();
+            }
+            
+            // Update workshop date
+            $('#workshop-date').text('Date: ' + data.date);
+            
+            // Update certificate ID
+            $('#certificate-id').text('Certificate: ' + data.id);
+            
+            // Update QR code
+            $('#qr-code-img').attr('src', 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://ipnacademy.in/user/certificate.php?id=' + data.id);
+            
+            // Update document title
+            document.title = 'Certificate - ' + data.u_name + ' - ' + data.w_name;
+        }
+
+        // Show error message
+        function showError(message) {
+            $('#error-message').text(message).show();
+            $('.certificate-wrapper').hide();
+            $('.download-container').hide();
+            $('#loading').hide();
+        }
+
+        // Load images directly into browser memory
+        const imageCache = {};
+        
+        // Convert external URLs to local data URLs to avoid CORS issues
+        async function convertImagesToDataURLs() {
+            const images = document.querySelectorAll('img');
+            
+            for (const img of images) {
+                try {
+                    // Skip if already processed
+                    if (img.getAttribute('data-original-src')) continue;
+                    
+                    // Store original src
+                    const originalSrc = img.src;
+                    img.setAttribute('data-original-src', originalSrc);
+                    
+                    // Create a new image with crossOrigin attribute
+                    const newImg = new Image();
+                    newImg.crossOrigin = 'Anonymous';
+                    
+                    // Use a proxy for CORS if needed
+                    const proxiedUrl = originalSrc;
+                    
+                    await new Promise((resolve, reject) => {
+                        newImg.onload = () => {
+                            try {
+                                // Create canvas and draw image
+                                const canvas = document.createElement('canvas');
+                                canvas.width = newImg.width;
+                                canvas.height = newImg.height;
+                                const ctx = canvas.getContext('2d');
+                                ctx.drawImage(newImg, 0, 0);
+                                
+                                // Convert to data URL
+                                const dataURL = canvas.toDataURL('image/png');
+                                img.src = dataURL;
+                                imageCache[originalSrc] = dataURL;
+                                resolve();
+                            } catch (e) {
+                                console.warn('Error converting image', e);
+                                // Revert to original src
+                                img.src = originalSrc;
+                                resolve();
+                            }
+                        };
+                        
+                        newImg.onerror = () => {
+                            console.warn(`Failed to load image: ${proxiedUrl}`);
+                            resolve(); // Continue with other images
+                        };
+                        
+                        newImg.src = proxiedUrl;
+                    });
+                } catch (error) {
+                    console.warn(`Error processing image: ${error.message}`);
+                }
+            }
+        }
+        
+        // Convert images on page load
+        window.addEventListener('load', convertImagesToDataURLs);
+        
+        // Generate canvas for both PDF and PNG
+        async function generateCanvas() {
+            const element = document.querySelector('.certificate');
+            
+            // Ensure all images are converted to data URLs first
+            await convertImagesToDataURLs();
+            
+            // Determine if mobile device for special handling
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            
+            // Generate canvas with improved settings
+            return html2canvas(element, {
+                scale: isMobile ? 4 : 3, // Higher scale for mobile devices
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#ffffff',
+                logging: false,
+                imageTimeout: 30000, // 30 seconds timeout
+                onclone: function(clonedDoc) {
+                    const clonedElement = clonedDoc.querySelector('.certificate');
+                    
+                    // Set dimensions
+                    clonedElement.style.width = element.offsetWidth + 'px';
+                    clonedElement.style.height = element.offsetHeight + 'px';
+                    clonedElement.style.position = 'relative';
+                    
+                    // Make sure SVG is properly rendered
+                    const svgElement = clonedDoc.querySelector('.blue-bar-svg');
+                    if (svgElement) {
+                        svgElement.style.width = '100%';
+                        svgElement.style.height = '80%';
+                        svgElement.style.display = 'block';
+                    }
+                    
+                    // Fix QR code positioning
+                    const qrCodeSection = clonedDoc.querySelector('.qr-code');
+                    if (qrCodeSection) {
+                        qrCodeSection.style.display = 'flex';
+                        qrCodeSection.style.justifyContent = 'flex-end';
+                        qrCodeSection.style.alignItems = 'flex-start';
+                        qrCodeSection.style.textAlign = 'right';
+                        
+                        const qrImg = qrCodeSection.querySelector('.qr-img');
+                        if (qrImg) {
+                            qrImg.style.width = 'auto';
+                            qrImg.style.maxWidth = isMobile ? '40px' : '70px'; 
+                            qrImg.style.height = 'auto';
+                            qrImg.style.display = 'block';
+                            qrImg.style.marginLeft = 'auto'; // Push to right
+                        }
+                    }
+                    
+                    // Copy cached image data URLs to cloned images
+                    const imgs = clonedElement.querySelectorAll('img');
+                    imgs.forEach(img => {
+                        const originalSrc = img.getAttribute('data-original-src') || img.src;
+                        
+                        if (imageCache[originalSrc]) {
+                            img.src = imageCache[originalSrc];
+                        }
+                        
+                        img.style.display = 'block';
+                        img.style.visibility = 'visible';
+                        
+                        // Force image rendering quality
+                        img.style.imageRendering = 'high-quality';
+                    });
+                    
+                    // Force bottom border style
+                    const border = clonedDoc.querySelector('.bottom-border');
+                    if (border) {
+                        border.style.display = 'block';
+                        border.style.background = 'linear-gradient(to right, #0a4590 85%, #f9a826 15%)';
+                    }
+                }
+            });
+        }
+        
+        // PDF Download Handler
+        document.getElementById('pdfBtn').addEventListener('click', async function() {
+            const btn = this;
+            const originalText = btn.textContent;
+            btn.textContent = 'Generating PDF...';
+            btn.disabled = true;
+            document.getElementById('pngBtn').disabled = true;
+            
+            try {
+                // Generate canvas
+                const canvas = await generateCanvas();
+                
+                // Access the jsPDF library
+                const { jsPDF } = window.jspdf;
+                
+                // Determine if mobile device
+                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                
+                // Create PDF in landscape A4
+                const pdf = new jsPDF({
+                    orientation: 'landscape',
+                    unit: 'mm',
+                    format: 'a4',
+                    compress: true,
+                    precision: 16
+                });
+                
+                // Convert canvas to image with maximum quality
+                const imgData = canvas.toDataURL('image/jpeg', 1.0);
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = pdf.internal.pageSize.getHeight();
+                
+                // Add the image to fit the page with high quality settings
+                pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
+                
+                // Get recipient name and workshop name for filename
+                const recipientName = document.getElementById('recipient-name').innerText.trim().replace(/\s+/g, '_');
+                const workshopName = document.getElementById('workshop-name').innerText.trim().replace(/\s+/g, '_');
+                
+                // Save the PDF with custom filename
+                pdf.save(`${recipientName}-${workshopName}-Certificate.pdf`);
+                
+                console.log('PDF generated successfully');
+            } catch (error) {
+                console.error('PDF generation failed:', error);
+                alert('Failed to generate PDF. Please try again.');
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+                document.getElementById('pngBtn').disabled = false;
+            }
+        });
+        
+        // PNG Download Handler
+        document.getElementById('pngBtn').addEventListener('click', async function() {
+            const btn = this;
+            const originalText = btn.textContent;
+            btn.textContent = 'Generating PNG...';
+            btn.disabled = true;
+            document.getElementById('pdfBtn').disabled = true;
+            
+            try {
+                // Generate canvas with higher quality
+                const canvas = await generateCanvas();
+                
+                // For mobile devices, create a higher resolution PNG
+                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                
+                // Get recipient name and workshop name for filename
+                const recipientName = document.getElementById('recipient-name').innerText.trim().replace(/\s+/g, '_');
+                const workshopName = document.getElementById('workshop-name').innerText.trim().replace(/\s+/g, '_');
+                
+                // Create download link - use maximum quality
+                const link = document.createElement('a');
+                link.download = `${recipientName}-${workshopName}-Certificate.png`;
+                link.href = canvas.toDataURL('image/png', 1.0);
+                
+                // Trigger download
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                console.log('PNG generated successfully');
+            } catch (error) {
+                console.error('PNG generation failed:', error);
+                alert('Failed to generate PNG. Please try again.');
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+                document.getElementById('pdfBtn').disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

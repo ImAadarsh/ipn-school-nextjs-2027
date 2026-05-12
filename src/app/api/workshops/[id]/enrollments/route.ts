@@ -25,6 +25,14 @@ export async function GET(
     const attended = searchParams.get("attended");
 
     try {
+        const linkRows = await query<{ n: number }>(
+            "SELECT COUNT(*) as n FROM school_links WHERE school_id = ? AND workshop_id = ?",
+            [schoolId, parseInt(id)]
+        );
+        if (!linkRows[0] || Number(linkRows[0].n) === 0) {
+            return NextResponse.json({ error: "Workshop not assigned to this school" }, { status: 404 });
+        }
+
         let sql = `
       SELECT p.id as payment_id, p.user_id, p.is_attended, p.is_school, p.order_id, p.attended_duration,
              u.name as user_name, u.email, u.mobile

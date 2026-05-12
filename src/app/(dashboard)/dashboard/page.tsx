@@ -88,6 +88,22 @@ export default function DashboardPage() {
                     <StatCard title="Total Feedback" value={stats.totalFeedback} icon={<Star />} trend="Reviews" color="violet" description="Workshops reviewed by teachers." />
                 </motion.div>
 
+                {charts.topWorkshops?.length > 0 && (
+                    <motion.div variants={itemVariants} className="bg-card rounded-3xl border shadow-sm p-6">
+                        <h3 className="text-xl font-bold flex items-center gap-2 mb-4">
+                            <Layers className="w-5 h-5 text-emerald-500" /> Assigned workshops (enrollments from your staff)
+                        </h3>
+                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {charts.topWorkshops.map((w: { name: string; count: number }, i: number) => (
+                                <div key={i} className="flex justify-between items-center gap-2 p-3 rounded-xl bg-muted/50 text-sm">
+                                    <span className="font-medium truncate" title={w.name}>{w.name}</span>
+                                    <span className="shrink-0 font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{w.count}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </motion.div>
+                )}
+
                 {/* Charts Area */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     

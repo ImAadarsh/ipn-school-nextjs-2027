@@ -22,14 +22,18 @@ export async function GET(request: Request) {
     const trainer = searchParams.get("trainer") || "";
 
     try {
+        // Workshops assigned to this school via school_links; enrollment counts are staff at this school only
         let sql = `
-      SELECT DISTINCT w.id, w.name, w.start_date, w.type, w.trainer_name, 
-             COUNT(p.id) as number_of_users
-      FROM payments p
-      JOIN workshops w ON p.workshop_id = w.id
-      WHERE p.school_id = ?
+      SELECT w.id, w.name, w.start_date, w.type, w.trainer_name,
+             MAX(sl.link) AS link,
+             COUNT(DISTINCT CASE WHEN u.id IS NOT NULL THEN p.id END) AS number_of_users
+      FROM school_links sl
+      JOIN workshops w ON w.id = sl.workshop_id
+      LEFT JOIN payments p ON p.workshop_id = w.id
+      LEFT JOIN users u ON p.user_id = u.id AND u.school_id = ?
+      WHERE sl.school_id = ?
     `;
-        const params: (string | number)[] = [schoolId];
+        const params: (string | number)[] = [schoolId, schoolId];
 
         if (type !== null && type !== "") {
             sql += " AND w.type = ?";

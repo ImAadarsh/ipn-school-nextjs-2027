@@ -26,21 +26,21 @@ export async function GET() {
         const totalTeachers = teachersRes?.cnt || 0;
 
         const [[workshopsRes]] = await pool.execute<RowDataPacket[]>(
-            "SELECT COUNT(DISTINCT workshop_id) as cnt FROM payments WHERE school_id = ?",
+            "SELECT COUNT(DISTINCT workshop_id) as cnt FROM school_links WHERE school_id = ?",
             [schoolId]
         );
         const totalWorkshops = workshopsRes?.cnt || 0;
 
-        // 2. Fetch Enrollments with User & Workshop Info
+        // 2. Enrollments: teachers at this school, only for workshops assigned via school_links
         const [enrollments] = await pool.execute<RowDataPacket[]>(
             `SELECT p.user_id, p.workshop_id, p.is_attended, p.attended_duration, 
               u.name as user_name, w.name as workshop_name, w.duration as total_duration, c.name as category, w.cpd as cpd
        FROM payments p
-       JOIN users u ON p.user_id = u.id
+       JOIN users u ON p.user_id = u.id AND u.school_id = ?
        JOIN workshops w ON p.workshop_id = w.id
        LEFT JOIN categories c ON w.category_id = c.id
-       WHERE p.school_id = ?`,
-            [schoolId]
+       WHERE EXISTS (SELECT 1 FROM school_links sl WHERE sl.workshop_id = p.workshop_id AND sl.school_id = ?)`,
+            [schoolId, schoolId]
         );
 
         // Compute KPIs
@@ -95,13 +95,45 @@ export async function GET() {
             .sort((a, b) => b.cpd - a.cpd)
             .slice(0, 5);
 
-        // Top Assessment Giver (Mock for now, normally queries `workshop_mcq_responses`)
-        const topAssessmentGiver = topTeachers.length > 0 ? { full_name: topTeachers[0].name, assessments_given: Math.floor(Math.random() * 15) + 5 } : null;
+        const [[assessmentCountRes]] = await pool.execute<RowDataPacket[]>(
+            `SELECT COUNT(*) AS cnt FROM workshop_mcq_responses m
+             JOIN users u ON m.user_id = u.id AND u.school_id = ?
+             WHERE EXISTS (SELECT 1 FROM school_links sl WHERE sl.workshop_id = m.workshop_id AND sl.school_id = ?)`,
+            [schoolId, schoolId]
+        );
+        const totalAssessments = Number(assessmentCountRes?.cnt) || 0;
 
-        // Feedback & Ratings
+        const [topGiverRows] = await pool.execute<RowDataPacket[]>(
+            `SELECT m.full_name AS full_name, COUNT(*) AS assessments_given
+             FROM workshop_mcq_responses m
+             JOIN users u ON m.user_id = u.id AND u.school_id = ?
+             WHERE EXISTS (SELECT 1 FROM school_links sl WHERE sl.workshop_id = m.workshop_id AND sl.school_id = ?)
+             GROUP BY m.user_id, m.full_name
+             ORDER BY assessments_given DESC
+             LIMIT 1`,
+            [schoolId, schoolId]
+        );
+        const topGiver = (topGiverRows as RowDataPacket[])[0];
+        const topAssessmentGiver =
+            topGiver && Number(topGiver.assessments_given) > 0
+                ? { full_name: String(topGiver.full_name || ""), assessments_given: Number(topGiver.assessments_given) }
+                : null;
+
+        const [[avgJoinRes]] = await pool.execute<RowDataPacket[]>(
+            `SELECT COALESCE(AVG(a.duration_attend), 0) AS avg_mins
+             FROM Attendees a
+             JOIN users u ON a.user_id = u.id AND u.school_id = ?
+             WHERE EXISTS (SELECT 1 FROM school_links sl WHERE sl.workshop_id = a.workshop_id AND sl.school_id = ?)`,
+            [schoolId, schoolId]
+        );
+        const avgJoinTime = Math.round(Number(avgJoinRes?.avg_mins) || 0);
+
+        // Feedback & Ratings (only for workshops assigned to this school)
         const [feedbacks] = await pool.execute<RowDataPacket[]>(
-            `SELECT f.rating FROM feedback f JOIN users u ON f.user_id = u.id WHERE u.school_id = ?`,
-            [schoolId]
+            `SELECT f.rating FROM feedback f
+             JOIN users u ON f.user_id = u.id AND u.school_id = ?
+             WHERE EXISTS (SELECT 1 FROM school_links sl WHERE sl.workshop_id = f.workshop_id AND sl.school_id = ?)`,
+            [schoolId, schoolId]
         );
         const totalFeedback = feedbacks.length;
         let totalRating = 0;
@@ -121,14 +153,21 @@ export async function GET() {
         const categoryDistribution = Object.entries(categoryCounts).map(([name, count]) => ({ name, count }));
         const ratingDistribution = Object.entries(ratingDist).map(([name, count]) => ({ name, count }));
 
-        // Monthly Activity (Mock data aligned with current year, usually queried from Attendees)
-        const monthlyActivity = [
-            { name: "Jan", visits: Math.floor(Math.random() * 50) + 10 },
-            { name: "Feb", visits: Math.floor(Math.random() * 60) + 20 },
-            { name: "Mar", visits: Math.floor(Math.random() * 80) + 30 },
-            { name: "Apr", visits: Math.floor(Math.random() * 70) + 25 },
-            { name: "May", visits: Math.floor(Math.random() * 90) + 40 },
-        ];
+        const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const monthlyActivity = MONTH_LABELS.map((name) => ({ name, visits: 0 }));
+        const [monthlyRows] = await pool.execute<RowDataPacket[]>(
+            `SELECT MONTH(COALESCE(a.login, a.created_at)) AS mn, COUNT(*) AS visits
+             FROM Attendees a
+             JOIN users u ON a.user_id = u.id AND u.school_id = ?
+             WHERE EXISTS (SELECT 1 FROM school_links sl WHERE sl.workshop_id = a.workshop_id AND sl.school_id = ?)
+               AND YEAR(COALESCE(a.login, a.created_at)) = YEAR(CURDATE())
+             GROUP BY MONTH(COALESCE(a.login, a.created_at))`,
+            [schoolId, schoolId]
+        );
+        for (const row of monthlyRows as RowDataPacket[]) {
+            const idx = Number(row.mn) - 1;
+            if (idx >= 0 && idx < 12) monthlyActivity[idx].visits = Number(row.visits) || 0;
+        }
 
         // Demographics
         const demographics = [
@@ -148,19 +187,36 @@ export async function GET() {
             { name: "Week 6", cpd: totalCPDEarned },
         ];
 
+        const [topWorkshopRows] = await pool.execute<RowDataPacket[]>(
+            `SELECT w.name AS name, COUNT(DISTINCT CASE WHEN u.id IS NOT NULL THEN p.id END) AS count
+             FROM school_links sl
+             JOIN workshops w ON w.id = sl.workshop_id
+             LEFT JOIN payments p ON p.workshop_id = w.id
+             LEFT JOIN users u ON p.user_id = u.id AND u.school_id = ?
+             WHERE sl.school_id = ?
+             GROUP BY w.id, w.name
+             ORDER BY count DESC, w.name ASC
+             LIMIT 10`,
+            [schoolId, schoolId]
+        );
+        const topWorkshops = (topWorkshopRows as RowDataPacket[]).map((r) => ({
+            name: r.name as string,
+            count: Number(r.count) || 0,
+        }));
+
         return NextResponse.json({
             stats: {
                 totalTeachers,
                 activeLearners,
                 totalEnrollments,
-                totalAssessments: Math.floor(totalEnrollments * 1.5),
+                totalAssessments,
                 topAssessmentGiver,
                 completionRate,
                 totalCPDEarned,
                 avgRating,
                 avgCPDPerTeacher,
                 certificatesIssued: completedCount,
-                avgJoinTime: 45, // mins
+                avgJoinTime,
                 totalLearningHours: Math.round(totalLearningHours),
                 totalWorkshops,
                 totalFeedback,
@@ -175,7 +231,7 @@ export async function GET() {
                 ratingDistribution,
                 cpdTrend,
                 categoryDistribution,
-                topWorkshops: [] // Can be filled if requested
+                topWorkshops
             },
             topTeachers
         });

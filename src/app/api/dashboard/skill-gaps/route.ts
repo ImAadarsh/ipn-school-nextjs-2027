@@ -26,9 +26,10 @@ export async function GET() {
              JOIN categories c ON w.category_id = c.id
              JOIN users u ON m.user_id = u.id
              WHERE u.school_id = ?
+             AND EXISTS (SELECT 1 FROM school_links sl WHERE sl.workshop_id = m.workshop_id AND sl.school_id = ?)
              GROUP BY c.id, c.name
              HAVING total_questions > 0`,
-            [schoolId]
+            [schoolId, schoolId]
         );
 
         const skillGaps = data.map(d => ({

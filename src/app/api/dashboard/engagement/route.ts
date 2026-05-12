@@ -22,10 +22,11 @@ export async function GET() {
              FROM Attendees a 
              JOIN users u ON a.user_id = u.id 
              WHERE u.school_id = ? 
+             AND EXISTS (SELECT 1 FROM school_links sl WHERE sl.workshop_id = a.workshop_id AND sl.school_id = ?)
              GROUP BY a.user_id, a.name, a.email
              ORDER BY total_duration DESC 
              LIMIT 10`,
-            [schoolId]
+            [schoolId, schoolId]
         );
 
         return NextResponse.json({ engagement: data });

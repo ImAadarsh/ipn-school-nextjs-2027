@@ -22,10 +22,11 @@ export async function GET() {
              FROM workshop_mcq_responses m
              JOIN users u ON m.user_id = u.id
              WHERE u.school_id = ? AND m.selected_option = m.correct_option
+             AND EXISTS (SELECT 1 FROM school_links sl WHERE sl.workshop_id = m.workshop_id AND sl.school_id = ?)
              GROUP BY m.user_id, m.full_name, m.email
              ORDER BY score DESC
              LIMIT 10`,
-            [schoolId]
+            [schoolId, schoolId]
         );
 
         return NextResponse.json({ leaderboard: data });

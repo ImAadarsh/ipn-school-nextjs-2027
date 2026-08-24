@@ -24,9 +24,9 @@ export async function GET() {
              FROM workshop_mcq_responses m
              JOIN workshops w ON m.workshop_id = w.id
              JOIN categories c ON w.category_id = c.id
-             JOIN users u ON m.user_id = u.id
-             WHERE u.school_id = ?
-             AND EXISTS (SELECT 1 FROM school_links sl WHERE sl.workshop_id = m.workshop_id AND sl.school_id = ?)
+             JOIN users u ON u.school_id = ?
+               AND (m.user_id = u.id OR (m.email IS NOT NULL AND m.email <> '' AND LOWER(TRIM(m.email)) = LOWER(TRIM(u.email))))
+             WHERE EXISTS (SELECT 1 FROM school_links sl WHERE sl.workshop_id = m.workshop_id AND sl.school_id = ?)
              GROUP BY c.id, c.name
              HAVING total_questions > 0`,
             [schoolId, schoolId]

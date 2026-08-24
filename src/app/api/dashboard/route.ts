@@ -101,20 +101,41 @@ export async function GET() {
             .sort((a, b) => b.cpd - a.cpd)
             .slice(0, 5);
 
-        const [[assessmentCountRes]] = await pool.execute<RowDataPacket[]>(
-            `SELECT COUNT(*) AS cnt FROM workshop_mcq_responses m
-             JOIN users u ON m.user_id = u.id AND u.school_id = ?
-             WHERE EXISTS (SELECT 1 FROM school_links sl WHERE sl.workshop_id = m.workshop_id AND sl.school_id = ?)`,
+        // Match respondents by user_id OR email — most MCQ rows have NULL user_id
+        const teacherMatch =
+            `(m.user_id = u.id OR (m.email IS NOT NULL AND m.email <> '' AND LOWER(TRIM(m.email)) = LOWER(TRIM(u.email))))`;
+
+        const [[mcqCountRes]] = await pool.execute<RowDataPacket[]>(
+            `SELECT COUNT(*) AS cnt FROM (
+                SELECT m.workshop_id, LOWER(TRIM(COALESCE(m.email, CONCAT('uid-', m.user_id)))) AS ident
+                FROM workshop_mcq_responses m
+                JOIN users u ON u.school_id = ? AND ${teacherMatch}
+                WHERE EXISTS (SELECT 1 FROM school_links sl WHERE sl.workshop_id = m.workshop_id AND sl.school_id = ?)
+                GROUP BY m.workshop_id, LOWER(TRIM(COALESCE(m.email, CONCAT('uid-', m.user_id))))
+             ) t`,
             [schoolId, schoolId]
         );
-        const totalAssessments = Number(assessmentCountRes?.cnt) || 0;
+        const [[textCountRes]] = await pool.execute<RowDataPacket[]>(
+            `SELECT COUNT(*) AS cnt FROM (
+                SELECT a.workshop_id, LOWER(TRIM(a.email)) AS ident
+                FROM workshop_assessment_responses a
+                JOIN users u ON u.school_id = ?
+                  AND a.email IS NOT NULL AND a.email <> ''
+                  AND LOWER(TRIM(a.email)) = LOWER(TRIM(u.email))
+                WHERE EXISTS (SELECT 1 FROM school_links sl WHERE sl.workshop_id = a.workshop_id AND sl.school_id = ?)
+                GROUP BY a.workshop_id, LOWER(TRIM(a.email))
+             ) t`,
+            [schoolId, schoolId]
+        );
+        const totalAssessments = (Number(mcqCountRes?.cnt) || 0) + (Number(textCountRes?.cnt) || 0);
 
         const [topGiverRows] = await pool.execute<RowDataPacket[]>(
-            `SELECT m.full_name AS full_name, COUNT(*) AS assessments_given
+            `SELECT COALESCE(u.name, m.full_name) AS full_name,
+                    COUNT(DISTINCT m.workshop_id) AS assessments_given
              FROM workshop_mcq_responses m
-             JOIN users u ON m.user_id = u.id AND u.school_id = ?
+             JOIN users u ON u.school_id = ? AND ${teacherMatch}
              WHERE EXISTS (SELECT 1 FROM school_links sl WHERE sl.workshop_id = m.workshop_id AND sl.school_id = ?)
-             GROUP BY m.user_id, m.full_name
+             GROUP BY u.id, COALESCE(u.name, m.full_name)
              ORDER BY assessments_given DESC
              LIMIT 1`,
             [schoolId, schoolId]

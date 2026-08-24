@@ -56,7 +56,12 @@ export async function GET() {
                    SUM(CASE WHEN m.selected_option = m.correct_option THEN 1 ELSE 0 END) as correct_answers
             FROM payments p
             JOIN workshops w ON p.workshop_id = w.id
-            LEFT JOIN workshop_mcq_responses m ON w.id = m.workshop_id AND m.user_id = p.user_id
+            JOIN users u ON p.user_id = u.id
+            LEFT JOIN workshop_mcq_responses m ON w.id = m.workshop_id
+              AND (
+                m.user_id = p.user_id
+                OR (m.email IS NOT NULL AND m.email <> '' AND LOWER(TRIM(m.email)) = LOWER(TRIM(u.email)))
+              )
             WHERE p.school_id = ?
             GROUP BY w.id, w.name
             HAVING total_attempts > 0

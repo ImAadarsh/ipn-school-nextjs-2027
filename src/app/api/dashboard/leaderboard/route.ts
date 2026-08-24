@@ -18,12 +18,13 @@ export async function GET() {
 
     try {
         const data = await query<{ name: string; email: string; score: number }>(
-            `SELECT m.full_name as name, m.email, COUNT(*) as score
+            `SELECT COALESCE(u.name, m.full_name) as name, COALESCE(u.email, m.email) as email,
+                    SUM(CASE WHEN m.selected_option = m.correct_option THEN 1 ELSE 0 END) as score
              FROM workshop_mcq_responses m
-             JOIN users u ON m.user_id = u.id
-             WHERE u.school_id = ? AND m.selected_option = m.correct_option
-             AND EXISTS (SELECT 1 FROM school_links sl WHERE sl.workshop_id = m.workshop_id AND sl.school_id = ?)
-             GROUP BY m.user_id, m.full_name, m.email
+             JOIN users u ON u.school_id = ?
+               AND (m.user_id = u.id OR (m.email IS NOT NULL AND m.email <> '' AND LOWER(TRIM(m.email)) = LOWER(TRIM(u.email))))
+             WHERE EXISTS (SELECT 1 FROM school_links sl WHERE sl.workshop_id = m.workshop_id AND sl.school_id = ?)
+             GROUP BY u.id, COALESCE(u.name, m.full_name), COALESCE(u.email, m.email)
              ORDER BY score DESC
              LIMIT 10`,
             [schoolId, schoolId]

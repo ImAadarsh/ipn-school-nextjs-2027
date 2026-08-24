@@ -52,14 +52,20 @@ export async function GET() {
         let notStartedCount = 0;
         let totalLearningHours = 0;
         let totalCPDEarned = 0;
+        let totalJoinMins = 0;
+        let joinCount = 0;
         
         const categoryCounts: Record<string, number> = {};
         const teacherStats = new Map();
 
         enrollments.forEach((e) => {
             const duration = parseInt(e.total_duration) || 60;
-            const attended = e.attended_duration || 0;
+            const attended = Number(e.attended_duration) || 0;
             totalLearningHours += (attended / 60);
+            if (attended > 0) {
+                totalJoinMins += attended;
+                joinCount++;
+            }
 
             let isCompleted = false;
             if (e.is_attended === 1 || attended >= duration * 0.9) {
@@ -119,14 +125,7 @@ export async function GET() {
                 ? { full_name: String(topGiver.full_name || ""), assessments_given: Number(topGiver.assessments_given) }
                 : null;
 
-        const [[avgJoinRes]] = await pool.execute<RowDataPacket[]>(
-            `SELECT COALESCE(AVG(a.duration_attend), 0) AS avg_mins
-             FROM Attendees a
-             JOIN users u ON a.user_id = u.id AND u.school_id = ?
-             WHERE EXISTS (SELECT 1 FROM school_links sl WHERE sl.workshop_id = a.workshop_id AND sl.school_id = ?)`,
-            [schoolId, schoolId]
-        );
-        const avgJoinTime = Math.round(Number(avgJoinRes?.avg_mins) || 0);
+        const avgJoinTime = joinCount > 0 ? Math.round(totalJoinMins / joinCount) : 0;
 
         // Feedback & Ratings (only for workshops assigned to this school)
         const [feedbacks] = await pool.execute<RowDataPacket[]>(

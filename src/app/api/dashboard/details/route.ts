@@ -149,7 +149,7 @@ async function workshops(schoolId: number): Promise<DetailPayload> {
     };
 }
 
-/** Match MCQ / assessment respondents to school teachers by user_id or email. */
+/** Match MCQ respondents to school teachers by user_id or email. */
 const SCHOOL_TEACHER_MATCH = `(m.user_id = u.id OR (m.email IS NOT NULL AND m.email <> '' AND LOWER(TRIM(m.email)) = LOWER(TRIM(u.email))))`;
 
 async function assessments(schoolId: number): Promise<DetailPayload> {
@@ -167,51 +167,25 @@ async function assessments(schoolId: number): Promise<DetailPayload> {
         [schoolId, schoolId]
     );
 
-    const [textRows] = await pool.execute<RowDataPacket[]>(
-        `SELECT a.full_name, a.email, a.designation, w.name AS workshop_name,
-                COUNT(*) AS answers, MAX(a.created_at) AS submitted_at
-         FROM workshop_assessment_responses a
-         JOIN users u ON u.school_id = ?
-           AND a.email IS NOT NULL AND a.email <> ''
-           AND LOWER(TRIM(a.email)) = LOWER(TRIM(u.email))
-         JOIN workshops w ON w.id = a.workshop_id
-         WHERE EXISTS (SELECT 1 FROM school_links sl WHERE sl.workshop_id = a.workshop_id AND sl.school_id = ?)
-         GROUP BY a.workshop_id, LOWER(TRIM(a.email)), a.full_name, a.email, a.designation, w.name
-         ORDER BY submitted_at DESC`,
-        [schoolId, schoolId]
-    );
-
-    const rows = [
-        ...mcqRows.map((r) => {
-            const answers = Number(r.answers) || 0;
-            const correct = Number(r.correct) || 0;
-            const score = answers > 0 ? Math.round((correct / answers) * 100) : 0;
-            return {
-                Teacher: r.full_name || "—",
-                Email: r.email || "—",
-                Workshop: r.workshop_name || "—",
-                Type: "MCQ",
-                Answers: answers,
-                Score: `${score}%`,
-                Submitted: r.submitted_at ? String(r.submitted_at).slice(0, 19).replace("T", " ") : "—",
-            };
-        }),
-        ...textRows.map((r) => ({
+    const rows = mcqRows.map((r) => {
+        const answers = Number(r.answers) || 0;
+        const correct = Number(r.correct) || 0;
+        const score = answers > 0 ? Math.round((correct / answers) * 100) : 0;
+        return {
             Teacher: r.full_name || "—",
             Email: r.email || "—",
             Workshop: r.workshop_name || "—",
-            Type: "Written",
-            Answers: Number(r.answers) || 0,
-            Score: "—",
+            Answers: answers,
+            Score: `${score}%`,
             Submitted: r.submitted_at ? String(r.submitted_at).slice(0, 19).replace("T", " ") : "—",
-        })),
-    ];
+        };
+    });
 
     return {
         metric: "assessments",
-        title: "Total Assessments",
-        description: "Unique assessment submissions by your teachers (MCQ + written).",
-        columns: ["Teacher", "Email", "Workshop", "Type", "Answers", "Score", "Submitted"],
+        title: "MCQ Quizzes",
+        description: "Unique workshop MCQ quiz submissions by your teachers (one row per teacher per workshop).",
+        columns: ["Teacher", "Email", "Workshop", "Answers", "Score", "Submitted"],
         rows,
     };
 }
@@ -232,13 +206,13 @@ async function topAssessmentGiver(schoolId: number): Promise<DetailPayload> {
 
     return {
         metric: "topAssessmentGiver",
-        title: "Assessment Leaderboard",
-        description: "Teachers ranked by workshops assessed and answers submitted.",
-        columns: ["Teacher", "Email", "Workshops", "Answers"],
+        title: "MCQ Quiz Leaderboard",
+        description: "Teachers ranked by workshop MCQ quizzes completed and answers submitted.",
+        columns: ["Teacher", "Email", "Quizzes", "Answers"],
         rows: givers.map((r) => ({
             Teacher: r.full_name || "—",
             Email: r.email || "—",
-            Workshops: Number(r.workshops) || 0,
+            Quizzes: Number(r.workshops) || 0,
             Answers: Number(r.answers) || 0,
         })),
     };
@@ -298,16 +272,48 @@ async function enrollmentBased(
         [schoolId, schoolId]
     );
 
-    const withFlags = enrollments.map((e) => {
+    type EnrollmentRow = {
+        user_id: number;
+        is_attended: number;
+        attended_duration: number;
+        order_id: string;
+        user_name: string;
+        email: string;
+        mobile: string;
+        workshop_name: string;
+        total_duration: string | number;
+        cpd: number;
+        start_date: string;
+        attended: number;
+        duration: number;
+        isCompleted: boolean;
+    };
+
+    const withFlags: EnrollmentRow[] = enrollments.map((e) => {
         const duration = parseInt(String(e.total_duration), 10) || 60;
         const attended = Number(e.attended_duration) || 0;
         const isCompleted = e.is_attended === 1 || attended >= duration * 0.9;
-        return { ...e, attended, duration, isCompleted };
+        return {
+            user_id: Number(e.user_id),
+            is_attended: Number(e.is_attended),
+            attended_duration: Number(e.attended_duration) || 0,
+            order_id: String(e.order_id || ""),
+            user_name: String(e.user_name || ""),
+            email: String(e.email || ""),
+            mobile: String(e.mobile || ""),
+            workshop_name: String(e.workshop_name || ""),
+            total_duration: e.total_duration,
+            cpd: Number(e.cpd) || 0,
+            start_date: String(e.start_date || ""),
+            attended,
+            duration,
+            isCompleted,
+        };
     });
 
     const meta: Record<
         typeof metric,
-        { title: string; description: string; filter: (e: (typeof withFlags)[0]) => boolean }
+        { title: string; description: string; filter: (e: EnrollmentRow) => boolean }
     > = {
         enrollments: {
             title: "Total Enrollments",

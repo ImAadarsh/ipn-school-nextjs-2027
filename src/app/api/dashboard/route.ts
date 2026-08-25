@@ -101,7 +101,7 @@ export async function GET() {
             .sort((a, b) => b.cpd - a.cpd)
             .slice(0, 5);
 
-        // Match respondents by user_id OR email — most MCQ rows have NULL user_id
+        // Workshop MCQ quizzes — match by user_id OR email (most MCQ rows have NULL user_id)
         const teacherMatch =
             `(m.user_id = u.id OR (m.email IS NOT NULL AND m.email <> '' AND LOWER(TRIM(m.email)) = LOWER(TRIM(u.email))))`;
 
@@ -115,19 +115,7 @@ export async function GET() {
              ) t`,
             [schoolId, schoolId]
         );
-        const [[textCountRes]] = await pool.execute<RowDataPacket[]>(
-            `SELECT COUNT(*) AS cnt FROM (
-                SELECT a.workshop_id, LOWER(TRIM(a.email)) AS ident
-                FROM workshop_assessment_responses a
-                JOIN users u ON u.school_id = ?
-                  AND a.email IS NOT NULL AND a.email <> ''
-                  AND LOWER(TRIM(a.email)) = LOWER(TRIM(u.email))
-                WHERE EXISTS (SELECT 1 FROM school_links sl WHERE sl.workshop_id = a.workshop_id AND sl.school_id = ?)
-                GROUP BY a.workshop_id, LOWER(TRIM(a.email))
-             ) t`,
-            [schoolId, schoolId]
-        );
-        const totalAssessments = (Number(mcqCountRes?.cnt) || 0) + (Number(textCountRes?.cnt) || 0);
+        const totalAssessments = Number(mcqCountRes?.cnt) || 0;
 
         const [topGiverRows] = await pool.execute<RowDataPacket[]>(
             `SELECT COALESCE(u.name, m.full_name) AS full_name,

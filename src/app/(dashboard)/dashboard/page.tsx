@@ -107,22 +107,22 @@ export default function DashboardPage() {
                         onClick={() => openDetails("enrollments", stats.totalEnrollments)}
                     />
                     <StatCard
-                        title="Total Assessments"
+                        title="MCQ Quizzes"
                         value={stats.totalAssessments}
                         icon={<Target />}
                         trend="Completed"
                         color="amber"
-                        description="Test submissions by teachers."
+                        description="Workshop MCQ quiz submissions by your teachers."
                         onClick={() => openDetails("assessments", stats.totalAssessments)}
                     />
 
                     <StatCard
-                        title="Top Assessment Giver"
+                        title="Top Quiz Taker"
                         value={stats.topAssessmentGiver?.assessments_given || 0}
                         icon={<Award />}
                         trend={stats.topAssessmentGiver?.full_name?.split(" ")[0] || "None"}
                         color="pink"
-                        description="The teacher answering the most quizzes."
+                        description="Teacher who completed the most workshop MCQ quizzes."
                         onClick={() => openDetails("topAssessmentGiver", stats.topAssessmentGiver?.assessments_given || 0)}
                     />
                     <StatCard
@@ -441,7 +441,10 @@ function StatCard({
                             <h3 className="text-3xl lg:text-4xl font-black mt-1 tracking-tighter tabular-nums">{value}</h3>
                         </div>
                         <div className={`p-3 rounded-2xl bg-muted/50 dark:bg-slate-800 border shadow-sm shrink-0 ${textColors[color] || textColors.blue}`}>
-                            {React.cloneElement(icon, { size: 22, strokeWidth: 2.5 })}
+                            {React.cloneElement(icon as React.ReactElement<{ size?: number; strokeWidth?: number }>, {
+                                size: 22,
+                                strokeWidth: 2.5,
+                            })}
                         </div>
                     </div>
 
